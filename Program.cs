@@ -106,38 +106,303 @@ namespace SortAlgorithms
         }
     }
 
+    public class SequentialMergeSort<T> : ISorter<T> where T : IComparable<T>
+    {
+        public virtual string Name => "Sequential MergeSort";
+        public virtual void Sort(T[] array)
+        {
+            if (array == null || array.Length <= 1) return;
+
+            var temp_array = new T[array.Length];
+            MergeSort(array, temp_array, 0, array.Length - 1);
+        }
+
+        protected void Merge(T[] array, T[] temp_array, int minIndex, int middleIndex, int maxIndex)
+        {
+            int left = minIndex;
+            int right = middleIndex + 1;
+            int index = minIndex;
+
+            while((left <= middleIndex) && (right <= maxIndex))
+            {
+                if(array[left].CompareTo(array[right]) <= 0)
+                {
+                    temp_array[index] = array[left];
+                    left++;
+                }
+                else
+                {
+                    temp_array[index] = array[right];
+                    right++;
+                }
+                index++;
+            }
+
+            for(int i = left; i <= middleIndex; i++)
+            {
+                temp_array[index] = array[i];
+                index++;
+            }
+            for(int i = right; i <= maxIndex; i++)
+            {
+                temp_array[index] = array[i];
+                index++;
+            }
+            for(int i = minIndex; i < maxIndex; i++)
+            {
+                array[i] = temp_array[i];
+            }
+        }
+
+        protected virtual void MergeSort(T[] array, T[] temp_array, int minIndex, int maxIndex)
+        {
+            if(minIndex < maxIndex)
+            {
+                int middleIndex = minIndex + (maxIndex - minIndex) / 2;
+                MergeSort(array, temp_array, minIndex, middleIndex);
+                MergeSort(array, temp_array, middleIndex + 1, maxIndex);
+                Merge(array, temp_array, minIndex, middleIndex, maxIndex);
+            }
+        }
+    }
+
+    public class ParallelMergeSort<T>: SequentialMergeSort<T> where T : IComparable<T>
+    {
+        public override string Name => "Parallel MergeSort";
+        private readonly int _maxDepth;
+
+        public ParallelMergeSort()
+        {
+            _maxDepth = (int)Math.Log(Environment.ProcessorCount, 2) + 4;
+        }
+
+        private void MergeSortParallel(T[] array, T[] temp_array, int minIndex, int maxIndex, int depth)
+        {
+            if(minIndex < maxIndex)
+            {
+                int middleIndex = minIndex + (maxIndex - minIndex) / 2;
+                if(depth < _maxDepth)
+                {
+                    Parallel.Invoke(
+                        () => MergeSortParallel(array, temp_array, minIndex, middleIndex, depth + 1),
+                        () => MergeSortParallel(array, temp_array, middleIndex + 1, maxIndex, depth + 1)
+                    );
+                }
+                else
+                {
+                    base.MergeSort(array, temp_array, minIndex, middleIndex);
+                    base.MergeSort(array, temp_array, middleIndex + 1, maxIndex);
+                }
+
+                Merge(array, temp_array, minIndex, middleIndex, maxIndex);
+            }
+        }
+
+        public override void Sort(T[] array)
+        {
+            if (array == null || array.Length <= 1) return;
+
+            var temp_array = new T[array.Length];
+            MergeSortParallel(array, temp_array, 0, array.Length - 1, 0);
+        }
+    }
+
+    public class SequentialCountingSort : ISorter<int>
+    {
+        public virtual string Name => "Sequential CountingSort";
+        public virtual void Sort(int[] array)
+        {
+            if (array == null || array.Length <= 1) return;
+
+            int min = array[0];
+            int max = array[0];
+            for(int i = 1; i < array.Length; i++)
+            {
+                if(array[i] < min)
+                    min = array[i];
+                else if (array[i] > max)
+                    max = array[i];
+            }
+
+            int range = max - min + 1;
+            int[] counts = new int[range];
+
+            for(int i = 0; i < array.Length; i++)
+            {
+                counts[array[i] - min]++;
+            }
+
+            int index = 0;
+            for(int i = 0; i < counts.Length; i++)
+            {
+                while(counts[i] > 0)
+                {
+                    array[index] = i + min;
+                    index++;
+                    counts[i]--;
+                }
+            }
+        }
+    }
+
+    public class ParallelCountingSort : SequentialCountingSort
+    {
+        public override string Name => "Parallel CountingSort";
+
+        public override void Sort(int[] array)
+        {
+            if(array == null || array.Length <= 1) return;
+
+            int min = array[0];
+            int max = array[0];
+            for(int i = 1; i < array.Length; i++)
+            {
+                if(array[i] < min)
+                    min = array[i];
+                else if (array[i] > max)
+                    max = array[i];
+            }
+            int range = max - min + 1;
+            int[] global_counts = new int[range];
+
+            var partitioner = Partitioner.Create(0, array.Length);
+
+            Parallel.ForEach(
+                partitioner,
+                () => new int[range],
+                (chunk, loop_state, local_counts) =>
+                {
+                    for(int i = chunk.Item1; i < chunk.Item2; i++)
+                    {
+                        local_counts[array[i] - min]++;
+                    }
+                    return local_counts;
+                },
+                (local_counts) =>
+                {
+                    lock (global_counts)
+                    {
+                        for(int i = 0; i < range; i++)
+                        {
+                            global_counts[i] += local_counts[i];
+                        }
+                    }
+                }
+            );
+
+            int index = 0;
+            for(int i = 0; i < global_counts.Length; i++)
+            {
+                int count = global_counts[i];
+                while(count > 0)
+                {
+                    array[index] = i + min;
+                    index++;
+                    count--;
+                }
+            }
+        }
+    }
+
+
     class Program
     {
         static void Main(string[] args)
         {
-            int array_size = 10_000_000;
+            int array_size = 100_000_000;
             Console.WriteLine($"Generating {array_size} elements array...");
             int[] original_array = GenerateRandomArray(array_size);
 
-            int[] array_for_sequential = (int[])original_array.Clone();
-            int[] array_for_parallel = (int[])original_array.Clone();
+            int[] array_for_quicksort_sequential = (int[])original_array.Clone();
+            int[] array_for_quicksort_parallel = (int[])original_array.Clone();
+            int[] array_for_mergesort_sequential = (int[])original_array.Clone();
+            int[] array_for_mergesort_parallel = (int[])original_array.Clone();
+            int[] array_for_countingsort_sequential = (int[])original_array.Clone();
+            int[] array_for_countingsort_parallel = (int[])original_array.Clone();
 
-            ISorter<int> sequential_sorter = new  SequentialQuickSort<int>();
-            Console.WriteLine($"\n::Starting: {sequential_sorter.Name}");
+            ISorter<int> sequential_quick_sorter = new  SequentialQuickSort<int>();
+            Console.WriteLine($"\n::Starting: {sequential_quick_sorter.Name}");
 
-            Stopwatch swSequential = Stopwatch.StartNew();
-            sequential_sorter.Sort(array_for_sequential);
-            swSequential.Stop();
+            Stopwatch swSequentialQuick = Stopwatch.StartNew();
+            sequential_quick_sorter.Sort(array_for_quicksort_sequential);
+            swSequentialQuick.Stop();
 
-            Console.WriteLine($"Sorted for: {swSequential.ElapsedMilliseconds}ms");
+            Console.WriteLine($"Sorted for: {swSequentialQuick.ElapsedMilliseconds}ms");
 
-            ISorter<int> parallel_sorter = new ParallelQuickSort<int>();
-            Console.WriteLine($"\n::Starting: {parallel_sorter.Name}");
+            ISorter<int> parallel_quick_sorter = new ParallelQuickSort<int>();
+            Console.WriteLine($"\n::Starting: {parallel_quick_sorter.Name}");
 
-            Stopwatch swParallel = Stopwatch.StartNew();
-            parallel_sorter.Sort(array_for_parallel);
-            swParallel.Stop();
+            Stopwatch swParallelQuick = Stopwatch.StartNew();
+            parallel_quick_sorter.Sort(array_for_quicksort_parallel);
+            swParallelQuick.Stop();
 
-            Console.WriteLine($"Sorted for: {swParallel.ElapsedMilliseconds}ms");
+            Console.WriteLine($"Sorted for: {swParallelQuick.ElapsedMilliseconds}ms");
 
             Console.WriteLine("\n---Matching the results---");
 
-            bool is_correct = array_for_sequential.SequenceEqual(array_for_parallel);
+            bool is_correct = array_for_quicksort_sequential.SequenceEqual(array_for_quicksort_parallel);
+
+            if (is_correct)
+            {
+                Console.WriteLine("The sorting results are the same");
+            }
+            else
+            {
+                Console.WriteLine("The sorting results are different!");
+            }
+
+            ISorter<int> sequential_merge_sorter = new  SequentialMergeSort<int>();
+            Console.WriteLine($"\n::Starting: {sequential_merge_sorter.Name}");
+
+            Stopwatch swSequentialMerge = Stopwatch.StartNew();
+            sequential_merge_sorter.Sort(array_for_mergesort_sequential);
+            swSequentialMerge.Stop();
+
+            Console.WriteLine($"Sorted for: {swSequentialMerge.ElapsedMilliseconds}ms");
+
+            ISorter<int> parallel_merge_sorter = new  ParallelMergeSort<int>();
+            Console.WriteLine($"\n::Starting: {parallel_merge_sorter.Name}");
+
+            Stopwatch swParallelMerge = Stopwatch.StartNew();
+            sequential_merge_sorter.Sort(array_for_mergesort_parallel);
+            swParallelMerge.Stop();
+
+            Console.WriteLine($"Sorted for: {swParallelMerge.ElapsedMilliseconds}ms");
+
+            Console.WriteLine("\n---Matching the results---");
+
+            is_correct = array_for_mergesort_sequential.SequenceEqual(array_for_mergesort_parallel);
+
+            if (is_correct)
+            {
+                Console.WriteLine("The sorting results are the same");
+            }
+            else
+            {
+                Console.WriteLine("The sorting results are different!");
+            }
+
+            ISorter<int> sequential_counting_sorter = new  SequentialCountingSort();
+            Console.WriteLine($"\n::Starting: {sequential_counting_sorter.Name}");
+
+            Stopwatch swSequentialCounting = Stopwatch.StartNew();
+            sequential_counting_sorter.Sort(array_for_countingsort_sequential);
+            swSequentialCounting.Stop();
+
+            Console.WriteLine($"Sorted for: {swSequentialCounting.ElapsedMilliseconds}ms");
+
+            ISorter<int> parallel_counting_sorter = new  ParallelCountingSort();
+            Console.WriteLine($"\n::Starting: {parallel_counting_sorter.Name}");
+
+            Stopwatch swParallelCounting = Stopwatch.StartNew();
+            parallel_counting_sorter.Sort(array_for_countingsort_parallel);
+            swParallelCounting.Stop();
+
+            Console.WriteLine($"Sorted for: {swParallelCounting.ElapsedMilliseconds}ms");
+
+            Console.WriteLine("\n---Matching the results---");
+
+            is_correct = array_for_countingsort_sequential.SequenceEqual(array_for_countingsort_parallel);
 
             if (is_correct)
             {
