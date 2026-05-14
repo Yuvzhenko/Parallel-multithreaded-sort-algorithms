@@ -303,13 +303,137 @@ namespace SortAlgorithms
             }
         }
     }
+    public class TreeNode<T>
+    {
+        public T Data;
+        public TreeNode<T> Left;
+        public TreeNode<T> Right;
+
+        public TreeNode(T data)
+        {
+            Data = data;
+        }
+    }
+
+    public class SequentialTreeNode<T>: ISorter<T> where T : IComparable<T>
+    {
+        public virtual string Name => "Sequential TreeNode";
+
+        protected virtual void Insert(TreeNode<T> root, T data)
+        {
+            TreeNode<T> current = root;
+            while (true)
+            {
+                if (data.CompareTo(current.Data) <= 0)
+                {
+                    if (current.Left == null)
+                    {
+                        current.Left = new TreeNode<T>(data);
+                        break;
+                    }
+                    current = current.Left;
+                }
+                else
+                {
+                    if(current.Right == null)
+                    {
+                        current.Right = new TreeNode<T>(data);
+                        break;
+                    }
+                    current = current.Right;
+                }
+            }
+        }
+
+        protected void InOrderTraversal(TreeNode<T> node, T[] array, ref int index)
+        {
+            if (node == null) return;
+
+            InOrderTraversal(node.Left, array, ref index);
+            array[index++] = node.Data;
+            InOrderTraversal(node.Right, array, ref index);
+        }
+
+        public virtual void Sort(T[] array)
+        {
+            if(array == null || array.Length <= 1) return;
+
+            TreeNode<T> root = new TreeNode<T>(array[0]);
+
+            for(int i = 1; i < array.Length; i++)
+            {
+                Insert(root, array[i]);
+            }
+
+            int index = 0;
+            InOrderTraversal(root, array, ref index);
+        }
+    }
+
+    public class ParallelTreeNode<T> : SequentialTreeNode<T> where T : IComparable<T>
+    {
+        public override string Name => "Parallel TreeNode";
+
+        private void InsertConcurrent(TreeNode<T> root, T data)
+        {
+            TreeNode<T> current = root;
+            while (true)
+            {
+                if (data.CompareTo(current.Data) <= 0)
+                {
+                    if(current.Left == null)
+                    {
+                        lock (current)
+                        {
+                            if(current.Left == null)
+                            {
+                                current.Left = new TreeNode<T>(data);
+                                break;
+                            }
+                        }
+                    }
+                    current = current.Left;
+                }
+                else
+                {
+                    if(current.Right == null)
+                    {
+                        lock (current)
+                        {
+                            if(current.Right == null)
+                            {
+                                current.Right = new TreeNode<T>(data);
+                                break;
+                            }
+                        }
+                    }
+                    current = current.Right;
+                }
+            }
+        }
+
+        public override void Sort(T[] array)
+        {
+            if (array == null || array.Length <= 1) return;
+
+            TreeNode<T> root = new TreeNode<T>(array[0]);
+
+            Parallel.For(1, array.Length, i =>
+            {
+                InsertConcurrent(root, array[i]);
+            });
+
+            int index = 0;
+            InOrderTraversal(root, array, ref index);
+        }
+    }
 
 
     class Program
     {
         static void Main(string[] args)
         {
-            int array_size = 100_000_000;
+            int array_size = 1_000_000;
             Console.WriteLine($"Generating {array_size} elements array...");
             int[] original_array = GenerateRandomArray(array_size);
 
@@ -319,6 +443,8 @@ namespace SortAlgorithms
             int[] array_for_mergesort_parallel = (int[])original_array.Clone();
             int[] array_for_countingsort_sequential = (int[])original_array.Clone();
             int[] array_for_countingsort_parallel = (int[])original_array.Clone();
+            int[] array_for_treeNodesort_sequential = (int[])original_array.Clone();
+            int[] array_for_treeNodesort_parallel = (int[])original_array.Clone();
 
             ISorter<int> sequential_quick_sorter = new  SequentialQuickSort<int>();
             Console.WriteLine($"\n::Starting: {sequential_quick_sorter.Name}");
@@ -403,6 +529,37 @@ namespace SortAlgorithms
             Console.WriteLine("\n---Matching the results---");
 
             is_correct = array_for_countingsort_sequential.SequenceEqual(array_for_countingsort_parallel);
+
+            if (is_correct)
+            {
+                Console.WriteLine("The sorting results are the same");
+            }
+            else
+            {
+                Console.WriteLine("The sorting results are different!");
+            }
+
+            ISorter<int> sequential_treeNode_sorter = new  SequentialTreeNode<int>();
+            Console.WriteLine($"\n::Starting: {sequential_treeNode_sorter.Name}");
+
+            Stopwatch swSequentialTreeNode = Stopwatch.StartNew();
+            sequential_treeNode_sorter.Sort(array_for_treeNodesort_sequential);
+            swSequentialTreeNode.Stop();
+
+            Console.WriteLine($"Sorted for: {swSequentialTreeNode.ElapsedMilliseconds}ms");
+
+            ISorter<int> parallel_treeNode_sorter = new ParallelTreeNode<int>();
+            Console.WriteLine($"\n::Starting: {parallel_treeNode_sorter.Name}");
+
+            Stopwatch swParallelTreeNode = Stopwatch.StartNew();
+            parallel_treeNode_sorter.Sort(array_for_treeNodesort_parallel);
+            swParallelTreeNode.Stop();
+
+            Console.WriteLine($"Sorted for: {swParallelTreeNode.ElapsedMilliseconds}ms");
+
+            Console.WriteLine("\n---Matching the results---");
+
+            is_correct = array_for_treeNodesort_sequential.SequenceEqual(array_for_treeNodesort_parallel);
 
             if (is_correct)
             {
