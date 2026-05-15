@@ -315,7 +315,7 @@ namespace SortAlgorithms
         }
     }
 
-    public class SequentialTreeNode<T>: ISorter<T> where T : IComparable<T>
+    public class SequentialTreeNodeSort<T>: ISorter<T> where T : IComparable<T>
     {
         public virtual string Name => "Sequential TreeNode";
 
@@ -370,7 +370,7 @@ namespace SortAlgorithms
         }
     }
 
-    public class ParallelTreeNode<T> : SequentialTreeNode<T> where T : IComparable<T>
+    public class ParallelTreeNodeSort<T> : SequentialTreeNodeSort<T> where T : IComparable<T>
     {
         public override string Name => "Parallel TreeNode";
 
@@ -428,6 +428,92 @@ namespace SortAlgorithms
         }
     }
 
+    public class SequentialCocktrailSort<T> : ISorter<T> where T : IComparable<T>
+    {
+        public virtual string Name => "Sequential CocktrailSort";
+
+        protected void Swap(T[] array, int i, int j)
+        {
+            T temp = array[i];
+            array[i] = array[j];
+            array[j] = temp;
+        }
+
+        public virtual void Sort(T[] array)
+        {
+            if (array == null || array.Length <= 1) return;
+
+            bool swapped = true;
+            int start = 0;
+            int end = array.Length - 1;
+
+            while (swapped)
+            {
+                swapped = false;
+
+                for(int i = start; i < end; i++)
+                {
+                    if(array[i].CompareTo(array[i+1]) > 0)
+                    {
+                        Swap(array, i, i+1);
+                        swapped = true;
+                    }
+                }
+
+                if (!swapped) break;
+
+                swapped = false;
+                end--;
+
+                for(int i = end-1; i >= start; i--)
+                {
+                    if(array[i].CompareTo(array[i+1]) > 0)
+                    {
+                        Swap(array, i, i+1);
+                        swapped = true;
+                    }
+                }
+                start++;
+            }
+        }
+    }
+
+    public class ParallelCocktrailSort<T> : SequentialCocktrailSort<T> where T : IComparable<T>
+    {
+        public override string Name => "Parallel CocktrailSort";
+
+        public override void Sort(T[] array)
+        {
+            if (array == null || array.Length <= 1) return;
+
+            int has_swapped = 1;
+
+            while (has_swapped == 1)
+            {
+                has_swapped = 0;
+
+                Parallel.For(0, array.Length / 2, i =>
+                {
+                   int j = i * 2;
+                   if(j < array.Length - 1 && array[j].CompareTo(array[j + 1]) > 0)
+                    {
+                        Swap(array, j, j+1);
+                        Interlocked.Exchange(ref has_swapped, 1);
+                    } 
+                });
+
+                Parallel.For(0, array.Length / 2, i =>
+                {
+                    int j = i * 2 + 1;
+                    if(j < array.Length - 1 && array[j].CompareTo(array[j+1]) > 0)
+                    {
+                        Swap(array, j, j + 1);
+                        Interlocked.Exchange(ref has_swapped, 1);
+                    }
+                });
+            }
+        }
+    }
 
     class Program
     {
@@ -445,6 +531,10 @@ namespace SortAlgorithms
             int[] array_for_countingsort_parallel = (int[])original_array.Clone();
             int[] array_for_treeNodesort_sequential = (int[])original_array.Clone();
             int[] array_for_treeNodesort_parallel = (int[])original_array.Clone();
+
+            array_size = 10_000;
+            int[] array_for_cocktrailsort_sequential = GenerateRandomArray(array_size);
+            int[] array_for_cocktrailsort_parallel = (int[])array_for_cocktrailsort_sequential.Clone();
 
             ISorter<int> sequential_quick_sorter = new  SequentialQuickSort<int>();
             Console.WriteLine($"\n::Starting: {sequential_quick_sorter.Name}");
@@ -539,7 +629,7 @@ namespace SortAlgorithms
                 Console.WriteLine("The sorting results are different!");
             }
 
-            ISorter<int> sequential_treeNode_sorter = new  SequentialTreeNode<int>();
+            ISorter<int> sequential_treeNode_sorter = new  SequentialTreeNodeSort<int>();
             Console.WriteLine($"\n::Starting: {sequential_treeNode_sorter.Name}");
 
             Stopwatch swSequentialTreeNode = Stopwatch.StartNew();
@@ -548,7 +638,7 @@ namespace SortAlgorithms
 
             Console.WriteLine($"Sorted for: {swSequentialTreeNode.ElapsedMilliseconds}ms");
 
-            ISorter<int> parallel_treeNode_sorter = new ParallelTreeNode<int>();
+            ISorter<int> parallel_treeNode_sorter = new ParallelTreeNodeSort<int>();
             Console.WriteLine($"\n::Starting: {parallel_treeNode_sorter.Name}");
 
             Stopwatch swParallelTreeNode = Stopwatch.StartNew();
@@ -560,6 +650,37 @@ namespace SortAlgorithms
             Console.WriteLine("\n---Matching the results---");
 
             is_correct = array_for_treeNodesort_sequential.SequenceEqual(array_for_treeNodesort_parallel);
+
+            if (is_correct)
+            {
+                Console.WriteLine("The sorting results are the same");
+            }
+            else
+            {
+                Console.WriteLine("The sorting results are different!");
+            }
+
+            ISorter<int> sequential_cocktrail_sorter = new SequentialCocktrailSort<int>();
+            Console.WriteLine($"\n::Starting: {sequential_cocktrail_sorter.Name}");
+
+            Stopwatch swSequentialCocktrail = Stopwatch.StartNew();
+            sequential_cocktrail_sorter.Sort(array_for_cocktrailsort_sequential);
+            swSequentialCocktrail.Stop();
+
+            Console.WriteLine($"Sorted for: {swSequentialCocktrail.ElapsedMilliseconds}ms");
+
+            ISorter<int> parallel_cocktrail_sorter = new ParallelCocktrailSort<int>();
+            Console.WriteLine($"\n::Starting: {parallel_cocktrail_sorter.Name}");
+
+            Stopwatch swParallelCocktrail = Stopwatch.StartNew();
+            parallel_cocktrail_sorter.Sort(array_for_cocktrailsort_parallel);
+            swParallelCocktrail.Stop();
+
+            Console.WriteLine($"Sorted for: {swParallelCocktrail.ElapsedMilliseconds}ms");
+
+            Console.WriteLine("\n---Matching the results---");
+
+            is_correct = array_for_cocktrailsort_sequential.SequenceEqual(array_for_cocktrailsort_parallel);
 
             if (is_correct)
             {
