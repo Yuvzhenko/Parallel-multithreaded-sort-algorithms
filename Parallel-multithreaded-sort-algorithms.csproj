@@ -8,4 +8,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Remove="SortAlgorithms.Tests\**" />
+    <EmbeddedResource Remove="SortAlgorithms.Tests\**" />
+    <None Remove="SortAlgorithms.Tests\**" />
+  </ItemGroup>
+
 </Project>

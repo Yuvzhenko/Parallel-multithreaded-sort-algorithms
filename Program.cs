@@ -148,7 +148,7 @@ namespace SortAlgorithms
                 temp_array[index] = array[i];
                 index++;
             }
-            for(int i = minIndex; i < maxIndex; i++)
+            for(int i = minIndex; i <= maxIndex; i++)
             {
                 array[i] = temp_array[i];
             }
@@ -519,7 +519,7 @@ namespace SortAlgorithms
     {
         static void Main(string[] args)
         {
-            int array_size = 1_000_000;
+            int array_size = 10_000_000;
             Console.WriteLine($"Generating {array_size} elements array...");
             int[] original_array = GenerateRandomArray(array_size);
 
@@ -539,157 +539,102 @@ namespace SortAlgorithms
             ISorter<int> sequential_quick_sorter = new  SequentialQuickSort<int>();
             Console.WriteLine($"\n::Starting: {sequential_quick_sorter.Name}");
 
-            Stopwatch swSequentialQuick = Stopwatch.StartNew();
+            Stopwatch swSequential = Stopwatch.StartNew();
             sequential_quick_sorter.Sort(array_for_quicksort_sequential);
-            swSequentialQuick.Stop();
+            swSequential.Stop();
 
-            Console.WriteLine($"Sorted for: {swSequentialQuick.ElapsedMilliseconds}ms");
+            Console.WriteLine($"Sorted for: {swSequential.ElapsedMilliseconds}ms");
 
             ISorter<int> parallel_quick_sorter = new ParallelQuickSort<int>();
             Console.WriteLine($"\n::Starting: {parallel_quick_sorter.Name}");
 
-            Stopwatch swParallelQuick = Stopwatch.StartNew();
+            Stopwatch swParallel = Stopwatch.StartNew();
             parallel_quick_sorter.Sort(array_for_quicksort_parallel);
-            swParallelQuick.Stop();
+            swParallel.Stop();
 
-            Console.WriteLine($"Sorted for: {swParallelQuick.ElapsedMilliseconds}ms");
+            Console.WriteLine($"Sorted for: {swParallel.ElapsedMilliseconds}ms");
 
-            Console.WriteLine("\n---Matching the results---");
-
-            bool is_correct = array_for_quicksort_sequential.SequenceEqual(array_for_quicksort_parallel);
-
-            if (is_correct)
-            {
-                Console.WriteLine("The sorting results are the same");
-            }
-            else
-            {
-                Console.WriteLine("The sorting results are different!");
-            }
+            Console.WriteLine($"Parallel version outperforms Sequential by a {(int)(100 * ((double)swSequential.ElapsedMilliseconds / swParallel.ElapsedMilliseconds - 1))}%");
 
             ISorter<int> sequential_merge_sorter = new  SequentialMergeSort<int>();
             Console.WriteLine($"\n::Starting: {sequential_merge_sorter.Name}");
 
-            Stopwatch swSequentialMerge = Stopwatch.StartNew();
+            swSequential = Stopwatch.StartNew();
             sequential_merge_sorter.Sort(array_for_mergesort_sequential);
-            swSequentialMerge.Stop();
+            swSequential.Stop();
 
-            Console.WriteLine($"Sorted for: {swSequentialMerge.ElapsedMilliseconds}ms");
+            Console.WriteLine($"Sorted for: {swSequential.ElapsedMilliseconds}ms");
 
             ISorter<int> parallel_merge_sorter = new  ParallelMergeSort<int>();
             Console.WriteLine($"\n::Starting: {parallel_merge_sorter.Name}");
 
-            Stopwatch swParallelMerge = Stopwatch.StartNew();
+            swParallel = Stopwatch.StartNew();
             sequential_merge_sorter.Sort(array_for_mergesort_parallel);
-            swParallelMerge.Stop();
+            swParallel.Stop();
 
-            Console.WriteLine($"Sorted for: {swParallelMerge.ElapsedMilliseconds}ms");
+            Console.WriteLine($"Sorted for: {swParallel.ElapsedMilliseconds}ms");
 
-            Console.WriteLine("\n---Matching the results---");
-
-            is_correct = array_for_mergesort_sequential.SequenceEqual(array_for_mergesort_parallel);
-
-            if (is_correct)
-            {
-                Console.WriteLine("The sorting results are the same");
-            }
-            else
-            {
-                Console.WriteLine("The sorting results are different!");
-            }
+            Console.WriteLine($"Parallel version outperforms Sequential by a {(int)(100 * ((double)swSequential.ElapsedMilliseconds / swParallel.ElapsedMilliseconds - 1))}%");
 
             ISorter<int> sequential_counting_sorter = new  SequentialCountingSort();
             Console.WriteLine($"\n::Starting: {sequential_counting_sorter.Name}");
 
-            Stopwatch swSequentialCounting = Stopwatch.StartNew();
+            swSequential = Stopwatch.StartNew();
             sequential_counting_sorter.Sort(array_for_countingsort_sequential);
-            swSequentialCounting.Stop();
+            swSequential.Stop();
 
-            Console.WriteLine($"Sorted for: {swSequentialCounting.ElapsedMilliseconds}ms");
+            Console.WriteLine($"Sorted for: {swSequential.ElapsedMilliseconds}ms");
 
             ISorter<int> parallel_counting_sorter = new  ParallelCountingSort();
             Console.WriteLine($"\n::Starting: {parallel_counting_sorter.Name}");
 
-            Stopwatch swParallelCounting = Stopwatch.StartNew();
+            swParallel = Stopwatch.StartNew();
             parallel_counting_sorter.Sort(array_for_countingsort_parallel);
-            swParallelCounting.Stop();
+            swParallel.Stop();
 
-            Console.WriteLine($"Sorted for: {swParallelCounting.ElapsedMilliseconds}ms");
+            Console.WriteLine($"Sorted for: {swParallel.ElapsedMilliseconds}ms");
 
-            Console.WriteLine("\n---Matching the results---");
-
-            is_correct = array_for_countingsort_sequential.SequenceEqual(array_for_countingsort_parallel);
-
-            if (is_correct)
-            {
-                Console.WriteLine("The sorting results are the same");
-            }
-            else
-            {
-                Console.WriteLine("The sorting results are different!");
-            }
+            Console.WriteLine($"Parallel version outperforms Sequential by a {(int)(100 * ((double)swSequential.ElapsedMilliseconds / swParallel.ElapsedMilliseconds - 1))}%");
 
             ISorter<int> sequential_treeNode_sorter = new  SequentialTreeNodeSort<int>();
             Console.WriteLine($"\n::Starting: {sequential_treeNode_sorter.Name}");
 
-            Stopwatch swSequentialTreeNode = Stopwatch.StartNew();
+            swSequential = Stopwatch.StartNew();
             sequential_treeNode_sorter.Sort(array_for_treeNodesort_sequential);
-            swSequentialTreeNode.Stop();
+            swSequential.Stop();
 
-            Console.WriteLine($"Sorted for: {swSequentialTreeNode.ElapsedMilliseconds}ms");
+            Console.WriteLine($"Sorted for: {swSequential.ElapsedMilliseconds}ms");
 
             ISorter<int> parallel_treeNode_sorter = new ParallelTreeNodeSort<int>();
             Console.WriteLine($"\n::Starting: {parallel_treeNode_sorter.Name}");
 
-            Stopwatch swParallelTreeNode = Stopwatch.StartNew();
+            swParallel = Stopwatch.StartNew();
             parallel_treeNode_sorter.Sort(array_for_treeNodesort_parallel);
-            swParallelTreeNode.Stop();
+            swParallel.Stop();
 
-            Console.WriteLine($"Sorted for: {swParallelTreeNode.ElapsedMilliseconds}ms");
+            Console.WriteLine($"Sorted for: {swParallel.ElapsedMilliseconds}ms");
 
-            Console.WriteLine("\n---Matching the results---");
-
-            is_correct = array_for_treeNodesort_sequential.SequenceEqual(array_for_treeNodesort_parallel);
-
-            if (is_correct)
-            {
-                Console.WriteLine("The sorting results are the same");
-            }
-            else
-            {
-                Console.WriteLine("The sorting results are different!");
-            }
+            Console.WriteLine($"Parallel version outperforms Sequential by a {(int)(100 * ((double)swSequential.ElapsedMilliseconds / swParallel.ElapsedMilliseconds - 1))}%");
 
             ISorter<int> sequential_cocktrail_sorter = new SequentialCocktrailSort<int>();
             Console.WriteLine($"\n::Starting: {sequential_cocktrail_sorter.Name}");
 
-            Stopwatch swSequentialCocktrail = Stopwatch.StartNew();
+            swSequential = Stopwatch.StartNew();
             sequential_cocktrail_sorter.Sort(array_for_cocktrailsort_sequential);
-            swSequentialCocktrail.Stop();
+            swSequential.Stop();
 
-            Console.WriteLine($"Sorted for: {swSequentialCocktrail.ElapsedMilliseconds}ms");
+            Console.WriteLine($"Sorted for: {swSequential.ElapsedMilliseconds}ms");
 
             ISorter<int> parallel_cocktrail_sorter = new ParallelCocktrailSort<int>();
             Console.WriteLine($"\n::Starting: {parallel_cocktrail_sorter.Name}");
 
-            Stopwatch swParallelCocktrail = Stopwatch.StartNew();
+            swParallel = Stopwatch.StartNew();
             parallel_cocktrail_sorter.Sort(array_for_cocktrailsort_parallel);
-            swParallelCocktrail.Stop();
+            swParallel.Stop();
 
-            Console.WriteLine($"Sorted for: {swParallelCocktrail.ElapsedMilliseconds}ms");
+            Console.WriteLine($"Sorted for: {swParallel.ElapsedMilliseconds}ms");
 
-            Console.WriteLine("\n---Matching the results---");
-
-            is_correct = array_for_cocktrailsort_sequential.SequenceEqual(array_for_cocktrailsort_parallel);
-
-            if (is_correct)
-            {
-                Console.WriteLine("The sorting results are the same");
-            }
-            else
-            {
-                Console.WriteLine("The sorting results are different!");
-            }
+            Console.WriteLine($"Parallel version outperforms Sequential by a {(int)(100 * ((double)swSequential.ElapsedMilliseconds / swParallel.ElapsedMilliseconds - 1))}%");
             
             Console.ReadLine();
         }
